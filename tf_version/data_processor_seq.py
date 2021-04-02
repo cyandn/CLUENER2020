@@ -45,7 +45,7 @@ def process_one_example(tokenizer, label2id, text, label, max_seq_len=128):
                 print("some unknown token...")
                 labels.append(labels[0])
     # tokens = tokenizer.tokenize(example.text)  -2 的原因是因为序列需要加一个句首和句尾标志
-    if len(tokens) >= max_seq_len - 1:
+    if len(tokens) > max_seq_len - 2:
         tokens = tokens[0:(max_seq_len - 2)]
         labels = labels[0:(max_seq_len - 2)]
     ntokens = []
@@ -84,7 +84,7 @@ def prepare_tf_record_data(tokenizer, max_seq_len, label2id, path, out_path):
     """
         生成训练数据， tf.record, 单标签分类模型, 随机打乱数据
     """
-    writer = tf.python_io.TFRecordWriter(out_path)
+    writer = tf.io.TFRecordWriter(out_path)
     example_count = 0
 
     for line in open(path):
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 
     max_seq_len = 64
 
-    prepare_tf_record_data(tokenizer, max_seq_len, label2id, path="data/thuctc_train.json",
-                           out_path="data/train.tf_record")
-    prepare_tf_record_data(tokenizer, max_seq_len, label2id, path="data/thuctc_valid.json",
-                           out_path="data/dev.tf_record")
+    prepare_tf_record_data(tokenizer, max_seq_len, label2id, path="../cluener_public/train.json",
+                           out_path="../cluener_public/train.tf_record")
+    prepare_tf_record_data(tokenizer, max_seq_len, label2id, path="../cluener_public/dev.json",
+                           out_path="../cluener_public/dev.tf_record")
