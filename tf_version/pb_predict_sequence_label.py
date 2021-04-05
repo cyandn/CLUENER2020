@@ -1,15 +1,11 @@
-#!/usr/bin/python
-# coding:utf8
-"""
-@author: Cong Yu
-@time: 2019-12-07 20:51
-"""
 import os
 import re
 import json
 import time
 import tensorflow as tf
 import tokenization
+
+from predict_sequence_label import process_one_example_p
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
@@ -19,76 +15,32 @@ label2id = json.loads(open("./label2id.json").read())
 id2label = [k for k, v in label2id.items()]
 
 
-def process_one_example_p(tokenizer, text, max_seq_len=128):
-    textlist = list(text)
-    tokens = []
-    # labels = []
-    for i, word in enumerate(textlist):
-        token = tokenizer.tokenize(word)
-        # print(token)
-        tokens.extend(token)
-    if len(tokens) > max_seq_len - 2:
-        tokens = tokens[0:(max_seq_len - 2)]
-        # labels = labels[0:(max_seq_len - 2)]
-    ntokens = []
-    segment_ids = []
-    label_ids = []
-    ntokens.append("[CLS]")  # 句子开始设置CLS 标志
-    segment_ids.append(0)
-    for i, token in enumerate(tokens):
-        ntokens.append(token)
-        segment_ids.append(0)
-        # label_ids.append(label2id[labels[i]])
-    ntokens.append("[SEP]")
-    segment_ids.append(0)
-    input_ids = tokenizer.convert_tokens_to_ids(ntokens)
-    input_mask = [1] * len(input_ids)
-    while len(input_ids) < max_seq_len:
-        input_ids.append(0)
-        input_mask.append(0)
-        segment_ids.append(0)
-        label_ids.append(0)
-        ntokens.append("**NULL**")
-    assert len(input_ids) == max_seq_len
-    assert len(input_mask) == max_seq_len
-    assert len(segment_ids) == max_seq_len
-
-    feature = (input_ids, input_mask, segment_ids)
-    return feature
-
-
-def load_model(model_folder):
-    # We retrieve our checkpoint fullpath
-    try:
-        checkpoint = tf.train.get_checkpoint_state(model_folder)
-        input_checkpoint = checkpoint.model_checkpoint_path
-        print("[INFO] input_checkpoint:", input_checkpoint)
-    except Exception as e:
-        input_checkpoint = model_folder
-        print("[INFO] Model folder", model_folder, repr(e))
-
-    # We clear devices to allow TensorFlow to control on which device it will load operations
-    clear_devices = True
+def load_model(model_path):
     tf.reset_default_graph()
-    # We import the meta graph and retrieve a Saver
-    saver = tf.train.import_meta_graph(input_checkpoint + '.meta', clear_devices=clear_devices)
+    output_graph_def = tf.GraphDef()
+    with open(model_path, "rb") as f:
+        output_graph_def.ParseFromString(f.read())
+        tf.import_graph_def(output_graph_def, name="")
 
-    # We start a session and restore the graph weights
+    # tvars = tf.global_variables()
+    # print('tvars', tvars)
+    # for v in tvars:
+    #     print('--initialized: %s, shape = %s' % (v.name, v.shape))
+    #
+    # exit()
+
     sess_ = tf.Session()
-    saver.restore(sess_, input_checkpoint)
+    sess_.run(tf.global_variables_initializer())
 
-    # opts = sess_.graph.get_operations()
-    # for v in opts:
-    #     print(v.name)
     return sess_
 
 
-model_path = "./ner_bert_base/"
+model_path = "pb/frozen_model.pb"
 sess = load_model(model_path)
 input_ids = sess.graph.get_tensor_by_name("input_ids:0")
 input_mask = sess.graph.get_tensor_by_name("input_mask:0")  # is_training
 segment_ids = sess.graph.get_tensor_by_name("segment_ids:0")  # fc/dense/Relu  cnn_block/Reshape
-keep_prob = sess.graph.get_tensor_by_name("keep_prob:0")
+# keep_prob = sess.graph.get_tensor_by_name("keep_prob:0")
 p = sess.graph.get_tensor_by_name("loss/ReverseSequence_1:0")
 
 
@@ -102,7 +54,7 @@ def predict(text):
     feed = {input_ids: [feature[0] for feature in features],
             input_mask: [feature[1] for feature in features],
             segment_ids: [feature[2] for feature in features],
-            keep_prob: 1.0
+            # keep_prob: 1.0
             }
 
     [probs] = sess.run([p], feed)
@@ -173,15 +125,15 @@ def submit(path, save_name):
     used_time = time.time() - start_time
     print('count:', count)
     print('used_time:', used_time)
-    print('inference/s:', count/used_time)
-    print('one inference:', used_time/count)
+    print('inference/s:', count / used_time)
+    print('one inference:', used_time / count)
     """
     CPU:
     count: 1343
     used_time: 65.40949296951294
     inference/s: 20.532187898566438
     one inference: 0.048704015613933685
-    
+
     GPU:
     count: 1343
     used_time: 29.657947301864624
@@ -192,10 +144,22 @@ def submit(path, save_name):
         f.write("\n".join(data))
 
 
-if __name__ == "__main__":
-    text_ = "梅塔利斯在乌克兰联赛、杯赛及联盟杯中保持9场不败，状态相当出色；"
-    res_ = predict(text_)
+if __name__ == '__main__':
+    # 测试pb模型
+    text = "梅塔利斯在乌克兰联赛、杯赛及联盟杯中保持9场不败，状态相当出色；"
+    res_ = predict(text)
     print(res_)
 
     # submit("../cluener_public/dev.json", save_name='ner_predict_dev.json')
     # submit("../cluener_public/test.json", save_name='cluener_predict.json')
+
+    """ GPU:
+    count: 1343
+    used_time: 29.807893753051758
+    inference/s: 45.05517938054588
+    one inference: 0.022195006517536676
+    count: 1345
+    used_time: 30.12023639678955
+    inference/s: 44.65436400570085
+    one inference: 0.022394227804304497
+    """

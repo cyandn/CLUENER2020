@@ -27,10 +27,11 @@ def get_f1_score_label(pre_lines, gold_lines, label="organization"):
         for i in gold:
             if i not in pre:
                 FN += 1
-    print(TP, FP, FN)
+    # print(TP, FP, FN)
     p = TP / (TP + FP)
     r = TP / (TP + FN)
     f = 2 * p * r / (p + r)
+    print(label)
     print(p, r, f)
     return f
 
@@ -50,6 +51,7 @@ def get_f1_score(pre_file="ner_predict.json", gold_file="data/thuctc_valid.json"
 
 
 if __name__ == "__main__":
-    f_score, avg = get_f1_score(pre_file="ner_predict_large.json", gold_file="data/thuctc_valid.json")
+    f_score, avg = get_f1_score(pre_file="tf_version/ner_predict_dev.json", gold_file="cluener_public/dev.json")
 
-    print(f_score, avg)
+    # print(f_score)
+    print(avg)

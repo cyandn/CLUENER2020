@@ -9,15 +9,16 @@ import modeling
 import optimization as optimization  # _freeze as optimization
 import os, math, json
 from sklearn.metrics import classification_report
+import numpy as np
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 # 100167/64 = 1565.1= 1566 * 5 = 7830
 config = {
-    "in_1": "./data/train.tf_record",  # 第一个输入为 训练文件
-    "in_2": "./data/dev.tf_record",  # 第二个输入为 验证文件
-    "bert_config": "./bert_base/bert_config.json",  # bert模型配置文件
-    "init_checkpoint": "./bert_base/bert_model.ckpt",  # 预训练bert模型
+    "in_1": "../cluener_public/train.tf_record",  # 第一个输入为 训练文件
+    "in_2": "../cluener_public/dev.tf_record",  # 第二个输入为 验证文件
+    "bert_config": "/home/wangxs/model/chinese_L-12_H-768_A-12/bert_config.json",  # bert模型配置文件
+    "init_checkpoint": "/home/wangxs/model/chinese_L-12_H-768_A-12/bert_model.ckpt",  # 预训练bert模型
     "train_examples_len": 10748,
     "dev_examples_len": 1343,
     "num_labels": 41,
@@ -112,7 +113,7 @@ def get_input_data(input_file, seq_length, batch_size, is_training=True):
     dataset = tf.data.TFRecordDataset(input_file)
     # 数据类别集中，需要较大的buffer_size，才能有效打乱，或者再 数据处理的过程中进行打乱
     if is_training:
-        dataset = dataset.map(parser).batch(batch_size).shuffle(buffer_size=3000)
+        dataset = dataset.map(parser).shuffle(buffer_size=config["train_examples_len"]).batch(batch_size)
     else:
         dataset = dataset.map(parser).batch(batch_size)
     iterator = dataset.make_one_shot_iterator()
@@ -170,7 +171,7 @@ def main():
         if init_checkpoint:
             # tvars = tf.global_variables()
             tvars = tf.trainable_variables()
-            print("global_variables", len(tvars))
+            print("trainable_variables", len(tvars))
             (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars,
                                                                                                        init_checkpoint)
             print("initialized_variable_names:", len(initialized_variable_names))
@@ -216,7 +217,8 @@ def main():
             print("loss :{}, acc :{}".format(out_loss, acc_))
             return out_loss, p_, y
 
-        min_total_loss_dev = 999999
+        # min_total_loss_dev = 999999
+        min_total_loss_dev = np.Inf
         step = 0
         for epoch in range(config["num_train_epochs"]):
             _ = "{:*^100s}".format(("epoch-" + str(epoch)).center(20))
