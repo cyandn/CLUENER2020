@@ -2,11 +2,11 @@ import os
 import re
 import json
 import time
-import tensorflow as tf
-import tokenization
+import tensorflow.compat.v1 as tf
+import tokenization_v2 as tokenization
 
-from predict_sequence_label import process_one_example_p
-
+from predict_v2 import process_one_example_p
+tf.disable_v2_behavior()
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 vocab_file = "./vocab.txt"

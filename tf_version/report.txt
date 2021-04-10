@@ -1,0 +1,20 @@
+TensorFlow 2.0 Upgrade Script
+-----------------------------
+Converted 1 files
+Detected 0 issues that require attention
+--------------------------------------------------------------------------------
+================================================================================
+Detailed log follows:
+
+================================================================================
+--------------------------------------------------------------------------------
+Processing file 'pb_predict.py'
+ outputting to 'pb_predict_v2.py'
+--------------------------------------------------------------------------------
+
+19:4: INFO: Renamed 'tf.reset_default_graph' to 'tf.compat.v1.reset_default_graph'
+20:23: INFO: Renamed 'tf.GraphDef' to 'tf.compat.v1.GraphDef'
+32:12: INFO: Renamed 'tf.Session' to 'tf.compat.v1.Session'
+33:14: INFO: Renamed 'tf.global_variables_initializer' to 'tf.compat.v1.global_variables_initializer'
+--------------------------------------------------------------------------------
+

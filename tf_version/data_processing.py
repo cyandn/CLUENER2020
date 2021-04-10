@@ -9,6 +9,8 @@ import tokenization
 import collections
 import tensorflow as tf
 
+from utils import split_seq
+
 
 def _truncate_seq_pair(tokens_a, tokens_b, max_length):
     """Truncates a sequence pair in place to the maximum length."""
@@ -84,6 +86,11 @@ def prepare_tf_record_data(tokenizer, max_seq_len, label2id, path, out_path):
     """
         生成训练数据， tf.record, 单标签分类模型, 随机打乱数据
     """
+
+    def create_int_feature(values):
+        f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
+        return f
+
     writer = tf.io.TFRecordWriter(out_path)
     example_count = 0
 
@@ -110,36 +117,34 @@ def prepare_tf_record_data(tokenizer, max_seq_len, label2id, path, out_path):
             # print()
         # feature = process_one_example(tokenizer, label2id, row[column_name_x1], row[column_name_y],
         #                               max_seq_len=max_seq_len)
-        feature = process_one_example(tokenizer, label2id, list(_["text"]), labels,
-                                      max_seq_len=max_seq_len)
+        xs, ys = split_seq(list(_["text"]), max_seq_len - 2, labels)
 
-        def create_int_feature(values):
-            f = tf.train.Feature(int64_list=tf.train.Int64List(value=list(values)))
-            return f
+        for xx, yy in zip(xs, ys):
+            feature = process_one_example(tokenizer, label2id, xx, yy, max_seq_len=max_seq_len)
 
-        features = collections.OrderedDict()
-        # 序列标注任务
-        features["input_ids"] = create_int_feature(feature[0])
-        features["input_mask"] = create_int_feature(feature[1])
-        features["segment_ids"] = create_int_feature(feature[2])
-        features["label_ids"] = create_int_feature(feature[3])
-        if example_count < 5:
-            print("*** Example ***")
-            print(_["text"])
-            print(_["label"])
-            print("input_ids: %s" % " ".join([str(x) for x in feature[0]]))
-            print("input_mask: %s" % " ".join([str(x) for x in feature[1]]))
-            print("segment_ids: %s" % " ".join([str(x) for x in feature[2]]))
-            print("label: %s " % " ".join([str(x) for x in feature[3]]))
+            features = collections.OrderedDict()
+            # 序列标注任务
+            features["input_ids"] = create_int_feature(feature[0])
+            features["input_mask"] = create_int_feature(feature[1])
+            features["segment_ids"] = create_int_feature(feature[2])
+            features["label_ids"] = create_int_feature(feature[3])
+            if example_count < 5:
+                print("*** Example ***")
+                print(_["text"])
+                print(_["label"])
+                print("input_ids: %s" % " ".join([str(x) for x in feature[0]]))
+                print("input_mask: %s" % " ".join([str(x) for x in feature[1]]))
+                print("segment_ids: %s" % " ".join([str(x) for x in feature[2]]))
+                print("label: %s " % " ".join([str(x) for x in feature[3]]))
 
-        tf_example = tf.train.Example(features=tf.train.Features(feature=features))
-        writer.write(tf_example.SerializeToString())
-        example_count += 1
+            tf_example = tf.train.Example(features=tf.train.Features(feature=features))
+            writer.write(tf_example.SerializeToString())
+            example_count += 1
 
-        # if example_count == 20:
-        #     break
-        if example_count % 3000 == 0:
-            print(example_count)
+            # if example_count == 20:
+            #     break
+            if example_count % 3000 == 0:
+                print(example_count)
     print("total example:", example_count)
     writer.close()
 
