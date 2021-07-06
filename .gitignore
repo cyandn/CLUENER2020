@@ -140,3 +140,4 @@ cython_debug/
 .idea/
 tf_version/ner_bert_base/
 tf_version/pb/
+.DS_Store
